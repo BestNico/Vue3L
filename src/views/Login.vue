@@ -53,7 +53,6 @@ export default defineComponent({
       if (result) {
         router.push('/')
         store.commit('login')
-        //console.log(store.state.user)
       }
     }
     return {
