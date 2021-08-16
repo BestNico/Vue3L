@@ -23,14 +23,22 @@ export interface PostProps {
   column: string;
 }
 
-interface UserProps {
+export interface UserProps {
   isLogin: boolean;
-  name?: string;
-  id?: number;
+  nickName?: string;
+  _id?: number;
   column?: string;
+  email?: string
+}
+
+export interface GlobalErrorProps {
+  status: boolean;
+  message?: string;
 }
 
 export interface GlobalDataProps {
+  error: GlobalErrorProps;
+  token: string;
   loading: boolean;
   columns: ColumnProps[];
   posts: PostProps[];
@@ -40,23 +48,31 @@ export interface GlobalDataProps {
 const getAndCommit = async (url: string, mutationName: string, commit: Commit) => {
   const { data } = await axios.get(url)
   commit(mutationName, data)
+  return data
+}
+
+const postAndCommit = async (url: string, mutationName: string, commit: Commit, payload: any) => {
+  console.log("calling postAndCommit")
+  const { data } = await axios.post(url, payload)
+  commit(mutationName, data)
+  return data
 }
 
 const store = createStore<GlobalDataProps>({
   state: {
+    error: { status: false },
+    token: localStorage.getItem('token') || '',
     loading: false,
     columns: [],
     posts: [],
     user: {
-      isLogin: true,
-      name: 'Mr.G',
-      column: "1"
+      isLogin: false
     }
   },
   mutations: {
-    login(state) {
-      state.user = { ...state.user, isLogin: true, name: "GH" }
-    },
+    // login(state) {
+    //   state.user = { ...state.user, isLogin: true, name: "GH" }
+    // },
     createPost(state, newPost) {
       state.posts.push(newPost)
     },
@@ -71,17 +87,41 @@ const store = createStore<GlobalDataProps>({
     },
     setLoading(state, status) {
       state.loading = status
+    },
+    setError(state, e: GlobalErrorProps) {
+      state.error = e
+    },
+    fetchCurrentUser(state, rawData) {
+      state.user = { isLogin: true, ...rawData.data }
+    },
+    login(state, rawData) {
+      const { token } = rawData.data
+      console.log("token", token)
+      state.token = token
+      localStorage.setItem('token', token)
+      axios.defaults.headers.common.Authorization = `Bearer ${token}`
     }
   },
   actions: {
     fetchColumns({ commit }) {
-      getAndCommit('/columns', 'fetchColumns', commit)
+      return getAndCommit('/columns', 'fetchColumns', commit)
     },
     fetchColumn({ commit }, cid) {
-      getAndCommit(`/columns/${cid}`, 'fetchColumn', commit)
+      return getAndCommit(`/columns/${cid}`, 'fetchColumn', commit)
     },
     fetchPosts({ commit }, cid) {
-      getAndCommit(`/columns/${cid}/posts`, 'fetchPosts', commit)
+      return getAndCommit(`/columns/${cid}/posts`, 'fetchPosts', commit)
+    },
+    login({ commit }, payload) {
+      return postAndCommit('/user/login', 'login', commit, payload)
+    },
+    fetchCurrentUser({ commit }) {
+      return getAndCommit('/user/current', 'fetchCurrentUser', commit)
+    },
+    loginAndFetch({ dispatch }, loginData) {
+      return dispatch('login', loginData).then(() => {
+        return dispatch('fetchCurrentUser')
+      })
     }
   },
   getters: {
