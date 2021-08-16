@@ -4,14 +4,15 @@ import router from './router'
 import store from './store'
 import axios from 'axios'
 
-axios.defaults.baseURL = ""
+axios.defaults.baseURL = "http://apis.imooc.com/api/"
 axios.interceptors.request.use(config => {
   store.commit('setLoading', true)
-  config.params = { ...config.params, icode: '' }
+  store.commit('setError', { status: false, message: '' })
+  config.params = { ...config.params, icode: 'A80C56F858CBABEE' }
   if (config.data instanceof FormData) {
-    config.data.append('icode', '')
+    config.data.append('icode', 'A80C56F858CBABEE')
   } else {
-    config.data = { ...config.data, icode: '' }
+    config.data = { ...config.data, icode: 'A80C56F858CBABEE' }
   }
   return config
 })
@@ -19,8 +20,13 @@ axios.interceptors.request.use(config => {
 axios.interceptors.response.use(config => {
   setTimeout(() => {
     store.commit('setLoading', false)
-  }, 2000)
+  }, 1000)
   return config
+}, e => {
+  const { error } = e.response.data
+  store.commit('setError', { status: true, message: error })
+  store.commit('setLoading', false)
+  return Promise.reject(error)
 })
 
 const app = createApp(App)
